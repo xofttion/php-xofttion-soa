@@ -1,0 +1,21 @@
+{
+    "name": "xofttion/soa",
+    "type": "library",
+    "license": "MIT",
+    "description": "Librería que proporciona un conjunto de clase para implementar los principios de Arquitectura Orientada a Servicios (SOA)",
+    "authors": [
+        {
+            "name": "Daniel Andres Castillo Pedroza",
+            "email": "ing.dacastillop@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "xofttion/orm" : "1.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Xofttion\\SOA\\": "src/"
+        }
+    }
+}
