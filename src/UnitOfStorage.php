@@ -83,23 +83,35 @@ class UnitOfStorage implements IUnitOfStorage {
     }
 
     public function persist(IModel $model): void {
-        $model->setContext($this->getContext()); // Asignando contexto
-//        
-//        $aggregations = $model->getAggregations(); // Agregaciones
-//                
-//        foreach ($aggregations->getParents() as $parent) {
-//            if (!$parent->exists) {
-//                $this->persist($parent); // Se debe persistir modelo
-//            }
-//            
-//            $aggregations->getParents()->getValue($parent)->associate($parent);
-//        }
+        $model->setContext($this->getContext());   // Asignando contexto
+        
+        $aggregations = $model->getAggregations(); // Agregaciones
+                
+        foreach ($aggregations->getParents()->values() as $parent) {
+            $modelParent = $parent->getValue(); // Modelo de la relación
+            
+            if (!$modelParent->exists) {
+                $this->persist($modelParent); // Se debe persistir modelo
+            }
+            
+            $parent->getRelation()->associate($modelParent); // Asociando
+        }
         
         $model->save(); // Guardando los datos del modelo
+                
+        foreach ($aggregations->getParents() as $key => $parent) {
+            $model[$key] = $parent->getValue(); // Asignando valor padre
+        }
         
-//        foreach ($aggregations->getChildrens() as $children) {
-//            $aggregations->getChildrens()->getValue($children)->saveMany($children);
-//        }
+        foreach ($aggregations->getChildrens() as $key => $children) {
+            $children->getRelation()->saveMany($children->getValue());
+            
+            $this->persist($children->getValue()); // Registrando
+            
+            $model[$key] = $children->getValue(); // Asignando valor hijo
+        }
+        
+        $this->attach($model); $model->cleanAggregations(); // Limpiando agregaciones
     }
 
     public function persists(Collection $collection): void {
@@ -109,7 +121,7 @@ class UnitOfStorage implements IUnitOfStorage {
     }
 
     public function safeguard(IModel $model): void {
-        
+        $model->push();
     }
 
     public function safeguards(Collection $collection): void {
