@@ -1,7 +1,7 @@
-## Xofttion ORM
+## Xofttion SOA
 
-Librería que proporciona un conjunto de clase para implementar los principios de mapeo objeto-relacional (ORM).
+Librería que proporciona un conjunto de clase para implementar los principios de Arquitectura Orientada a Servicios (SOA)
 
 ## Instalación
 
-    composer require xofttion/orm
+    composer require xofttion/soa

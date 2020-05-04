@@ -2,6 +2,8 @@
 
 namespace Xofttion\SOA\Contracts;
 
+use Illuminate\Database\Capsule\Manager;
+
 use Xofttion\SOA\Contracts\IRepository;
 use Xofttion\SOA\Contracts\IEntity;
 use Xofttion\SOA\Contracts\IEntityCollection;
@@ -9,6 +11,13 @@ use Xofttion\SOA\Contracts\IEntityCollection;
 interface IUnitOfWork {
     
     // Métodos de la interfaz IUnitOfWork
+    
+    /**
+     * 
+     * @param Manager|null $connectionManager
+     * @return void
+     */
+    public function setConnectionManager(?Manager $connectionManager): void;
     
     /**
      * 

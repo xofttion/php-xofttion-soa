@@ -5,7 +5,7 @@ namespace Xofttion\SOA;
 use ReflectionClass;
 
 use Illuminate\Database\ConnectionInterface;
-use Illuminate\Database\Capsule\Manager as DB;
+use Illuminate\Database\Capsule\Manager;
 
 use Xofttion\Kernel\Utils\Reflection;
 
@@ -20,6 +20,12 @@ use Xofttion\SOA\Utils\AggregationsStorage;
 class UnitOfWork implements IUnitOfWork {
     
     // Atributos de la clase UnitOfWork
+    
+    /**
+     *
+     * @var Manager 
+     */
+    protected $connectionManager;
     
     /**
      *
@@ -64,6 +70,10 @@ class UnitOfWork implements IUnitOfWork {
     }
 
     // Métodos sobrescritos de la interfaz IUnitOfWork
+    
+    public function setConnectionManager(?Manager $connectionManager): void {
+        $this->connectionManager = $connectionManager;
+    }
 
     public function setContext(?string $context): void {
         $this->context = $context;
@@ -115,7 +125,7 @@ class UnitOfWork implements IUnitOfWork {
         
         $this->insert($entity); // Registrando entidad principal
         
-        $cascades = $this->getAggregationsArray()->cascade($entity);
+        $cascades = $this->getAggregationsStorage()->cascade($entity);
         
         foreach ($cascades as $aggregation) {
             $this->insertAggregation($entity, $cascades->getValue($aggregation));
@@ -131,7 +141,7 @@ class UnitOfWork implements IUnitOfWork {
     public function safeguard(IEntity $entity): void {
         $this->modify($entity); // Actualizando entidad principal
         
-        $cascades = $this->getAggregationsArray()->cascade($entity);
+        $cascades = $this->getAggregationsStorage()->cascade($entity);
         
         foreach ($cascades as $aggregation) {
             $this->modifyAggregation($entity, $cascades->getValue($aggregation));
@@ -210,10 +220,18 @@ class UnitOfWork implements IUnitOfWork {
      */
     protected function getConnection(): ConnectionInterface {
         if (is_null($this->connection)) {
-            $this->connection = DB::connection($this->getContext());
+            $this->connection = $this->getConnectionInterface();
         } // Definiendo conexión de la transacción 
         
         return $this->connection; // Conexión con base de datos
+    }
+    
+    /**
+     * 
+     * @return ConnectionInterface
+     */
+    protected function getConnectionInterface(): ConnectionInterface {
+        return $this->connectionManager->getConnection($this->getContext());
     }
     
     /**
@@ -231,7 +249,7 @@ class UnitOfWork implements IUnitOfWork {
      * @return void
      */
     protected function setBelongAggregations(IEntity $entity): void {
-        $belongs    = $this->getAggregationsArray()->belong($entity);
+        $belongs    = $this->getAggregationsStorage()->belong($entity);
         $reflection = new ReflectionClass($entity);
         
         foreach ($belongs as $aggregation) {
@@ -241,10 +259,10 @@ class UnitOfWork implements IUnitOfWork {
                 $this->persist($entityAggregation); // Persistiendo entidad
             }
             
-            $keyValue = $entityAggregation->getPrimaryKey();
-            $keyName  = $aggregation->getColumn();
+            $valuePK = $entityAggregation->getPrimaryKey();
+            $namePK  = $aggregation->getColumn();
             
-            Reflection::assingSetter($entity, $keyName, $keyValue, $reflection);
+            Reflection::assingSetter($entity, $namePK, $valuePK, $reflection);
         }
     }
 
@@ -305,12 +323,12 @@ class UnitOfWork implements IUnitOfWork {
     /**
      * 
      * @param IEntity $entity
-     * @param StatusEntity $item
+     * @param StatusEntity $status
      * @return void
      */
-    protected function update(IEntity $entity, StatusEntity $item): void {
-        if ($item->getEntity() != $entity) {
-            $data = $this->getArrayUpdate($entity, $item->getEntity());
+    protected function update(IEntity $entity, StatusEntity $status): void {
+        if ($status->getEntity() != $entity) {
+            $data = $this->getArrayUpdate($entity, $status->getEntity());
 
             $this->getRepository(get_class($entity))->update($entity->getPrimaryKey(), $data);
         } // Entidad modificada, requiere ser actualizada en el Repositorio
@@ -352,7 +370,7 @@ class UnitOfWork implements IUnitOfWork {
      * 
      * @return IAggregationsStorage
      */
-    protected function getAggregationsArray(): IAggregationsStorage {
+    protected function getAggregationsStorage(): IAggregationsStorage {
         return AggregationsStorage::getInstance();
     }
 }

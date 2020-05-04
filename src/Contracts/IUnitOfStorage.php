@@ -2,6 +2,7 @@
 
 namespace Xofttion\SOA\Contracts;
 
+use Illuminate\Database\Capsule\Manager;
 use Illuminate\Database\Eloquent\Collection;
 
 use Xofttion\ORM\Contracts\IModel;
@@ -12,6 +13,13 @@ interface IUnitOfStorage {
     
     // Métodos de la interfaz IUnitOfStorage
     
+    /**
+     * 
+     * @param Manager|null $connectionManager
+     * @return void
+     */
+    public function setConnectionManager(?Manager $connectionManager): void;
+
     /**
      * 
      * @param string|null $context

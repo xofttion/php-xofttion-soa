@@ -4,9 +4,10 @@ namespace Xofttion\SOA;
 
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Capsule\Manager as DB;
+use Illuminate\Database\Capsule\Manager;
 
 use Xofttion\ORM\Contracts\IModel;
+use Xofttion\ORM\Contracts\IAggregation;
 
 use Xofttion\SOA\Contracts\IUnitOfStorage;
 use Xofttion\SOA\Contracts\IStorage;
@@ -15,6 +16,12 @@ use Xofttion\SOA\Storage;
 class UnitOfStorage implements IUnitOfStorage {
     
     // Atributos de la clase UnitOfStorage
+    
+    /**
+     *
+     * @var Manager 
+     */
+    protected $connectionManager;
     
     /**
      *
@@ -53,6 +60,10 @@ class UnitOfStorage implements IUnitOfStorage {
     }
 
     // Métodos sobrescritos de la interfaz UnitOfStorage
+    
+    public function setConnectionManager(?Manager $connectionManager): void {
+        $this->connectionManager = $connectionManager;
+    }
 
     public function setContext(?string $context): void {
         $this->context = $context;
@@ -83,35 +94,9 @@ class UnitOfStorage implements IUnitOfStorage {
     }
 
     public function persist(IModel $model): void {
-        $model->setContext($this->getContext());   // Asignando contexto
+        $model->reaload($this->insert($model));  // Registrando
         
-        $aggregations = $model->getAggregations(); // Agregaciones
-                
-        foreach ($aggregations->getParents()->values() as $parent) {
-            $modelParent = $parent->getValue(); // Modelo de la relación
-            
-            if (!$modelParent->exists) {
-                $this->persist($modelParent); // Se debe persistir modelo
-            }
-            
-            $parent->getRelation()->associate($modelParent); // Asociando
-        }
-        
-        $model->save(); // Guardando los datos del modelo
-                
-        foreach ($aggregations->getParents() as $key => $parent) {
-            $model[$key] = $parent->getValue(); // Asignando valor padre
-        }
-        
-        foreach ($aggregations->getChildrens() as $key => $children) {
-            $children->getRelation()->saveMany($children->getValue());
-            
-            $this->persist($children->getValue()); // Registrando
-            
-            $model[$key] = $children->getValue(); // Asignando valor hijo
-        }
-        
-        $this->attach($model); $model->cleanAggregations(); // Limpiando agregaciones
+        $this->attach($model); $model->cleanAggregations();
     }
 
     public function persists(Collection $collection): void {
@@ -205,12 +190,98 @@ class UnitOfStorage implements IUnitOfStorage {
      */
     protected function getConnection(): ConnectionInterface {
         if (is_null($this->connection)) {
-            $this->connection = DB::connection($this->getContext());
+            $this->connection = $this->getConnectionInterface();
         } // Definiendo conexión de la transacción 
         
         return $this->connection; // Conexión con base de datos
     }
     
+    /**
+     * 
+     * @return ConnectionInterface
+     */
+    protected function getConnectionInterface(): ConnectionInterface {
+        return $this->connectionManager->getConnection($this->getContext());
+    }
+    
+    /**
+     * 
+     * @param IModel $model
+     * @return array
+     */
+    protected function insert(IModel $model): array {
+        $model->setContext($this->getContext()); // Asignando contexto
+        
+        $aggregations = $model->getAggregations(); // Agregaciones del modelo
+        $reloads      = []; // Formato de relaciones para refrescar
+                
+        foreach ($aggregations->getParents() as $key => $parent) {
+            $this->attachReloads($reloads, $key, $this->insertParent($parent));
+        }
+        
+        $model->save(); // Guardando los datos del modelo
+        
+        foreach ($aggregations->getChildrens() as $key => $children) {
+            $this->attachReloads($reloads, $key, $this->insertChildren($children));
+        }
+        
+        return $reloads; // Retornando formato de relaciones para refrescar
+    }
+    
+    /**
+     * 
+     * @param IAggregation $parent
+     * @return array
+     */
+    private function insertParent(IAggregation $parent): array {
+        $modelParent   = $parent->getValue(); // Modelo padre
+        $reloadsParent = []; // Agregaciones del padre
+            
+        if (!$modelParent->exists) {
+            $reloadsParent = $this->insert($modelParent); 
+        }
+            
+        $parent->getRelation()->associate($modelParent);
+        
+        return $reloadsParent; // Retornando relaciones para refrescar
+    }
+    
+    /**
+     * 
+     * @param IAggregation $children
+     * @return array
+     */
+    private function insertChildren(IAggregation $children): array {
+        $children->getRelation()->saveMany($children->getValue());
+        
+        $reloadsChildren = []; // Agregaciones del hijo
+        
+        if (is_array($children->getValue())) {
+            foreach ($children->getValue() as $modelChildren) {
+                $reloadsChildren = array_unique(array_merge($reloadsChildren, $this->insert($modelChildren)));
+            } 
+        } else {
+            $reloadsChildren = $this->insert($children->getValue());
+        }
+        
+        return $reloadsChildren; // Retornando relaciones para refrescar
+    }
+
+    /**
+     * 
+     * @param array $reloads
+     * @param string $key
+     * @param array $values
+     * @return void
+     */
+    private function attachReloads(array &$reloads, string $key, array $values) : void {
+        if (empty($values)) {
+            array_push($reloads, $key); // Relación única
+        } else {
+            $reloads[$key] = $values; // Relación con anidadas
+        }
+    }
+
     /**
      * 
      * @param IModel $model
