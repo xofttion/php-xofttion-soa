@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Capsule\Manager;
 
 use Xofttion\ORM\Contracts\IModel;
-use Xofttion\ORM\Contracts\IAggregation;
+use Xofttion\ORM\Contracts\IRelationship;
 
 use Xofttion\SOA\Contracts\IUnitOfStorage;
 use Xofttion\SOA\Contracts\IStorage;
@@ -96,7 +96,7 @@ class UnitOfStorage implements IUnitOfStorage {
     public function persist(IModel $model): void {
         $model->reaload($this->insert($model));  // Registrando
         
-        $this->attach($model); $model->cleanAggregations();
+        $this->attach($model); $model->cleanRelationships();
     }
 
     public function persists(Collection $collection): void {
@@ -212,17 +212,19 @@ class UnitOfStorage implements IUnitOfStorage {
     protected function insert(IModel $model): array {
         $model->setContext($this->getContext()); // Asignando contexto
         
-        $aggregations = $model->getAggregations(); // Agregaciones del modelo
-        $reloads      = []; // Formato de relaciones para refrescar
-                
-        foreach ($aggregations->getParents() as $key => $parent) {
-            $this->attachReloads($reloads, $key, $this->insertParent($parent));
-        }
-        
-        $model->save(); // Guardando los datos del modelo
-        
-        foreach ($aggregations->getChildrens() as $key => $children) {
-            $this->attachReloads($reloads, $key, $this->insertChildren($children));
+        $relationships = $model->getRelationships(); // Relaciones del modelo
+        $reloads       = []; // Formato de relaciones para refrescar
+             
+        if (!is_null($relationships)) {
+            foreach ($relationships->getParents() as $key => $parent) {
+                $this->attachReloads($reloads, $key, $this->insertParent($parent));
+            }
+
+            $model->save(); // Guardando los datos del modelo
+
+            foreach ($relationships->getChildrens() as $key => $children) {
+                $this->attachReloads($reloads, $key, $this->insertChildren($children));
+            }
         }
         
         return $reloads; // Retornando formato de relaciones para refrescar
@@ -230,10 +232,10 @@ class UnitOfStorage implements IUnitOfStorage {
     
     /**
      * 
-     * @param IAggregation $parent
+     * @param IRelationship $parent
      * @return array
      */
-    private function insertParent(IAggregation $parent): array {
+    private function insertParent(IRelationship $parent): array {
         $modelParent   = $parent->getValue(); // Modelo padre
         $reloadsParent = []; // Agregaciones del padre
             
@@ -248,10 +250,10 @@ class UnitOfStorage implements IUnitOfStorage {
     
     /**
      * 
-     * @param IAggregation $children
+     * @param IRelationship $children
      * @return array
      */
-    private function insertChildren(IAggregation $children): array {
+    private function insertChildren(IRelationship $children): array {
         $children->getRelation()->saveMany($children->getValue());
         
         $reloadsChildren = []; // Agregaciones del hijo

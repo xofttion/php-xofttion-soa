@@ -3,6 +3,11 @@
     "type": "library",
     "license": "MIT",
     "description": "Librería que proporciona un conjunto de clase para implementar los principios de Arquitectura Orientada a Servicios (SOA)",
+    "keywords": [
+        "xofttion",
+        "soa",
+        "laravel"
+    ],
     "authors": [
         {
             "name": "Daniel Andres Castillo Pedroza",
@@ -11,7 +16,7 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "xofttion/orm" : "dev-master"
+        "xofttion/orm": "dev-master"
     },
     "autoload": {
         "psr-4": {

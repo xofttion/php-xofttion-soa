@@ -132,7 +132,7 @@ class EntityMapper implements IEntityMapper {
         $array = $this->getEntityCollection(); // Colección 
         
         foreach ($collection as $value) {
-            $array->add($this->createEntity($classEntity, $value));
+            $array->attach($this->createEntity($classEntity, $value));
         } // Cargando entidades del listado
         
         return $array; // Retornando entidades generadas

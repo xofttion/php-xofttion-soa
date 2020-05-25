@@ -92,6 +92,7 @@ class UnitOfWork implements IUnitOfWork {
             $repository = $this->getInstanceRepository($classEntity);
             $repository->setUnitOfWork($this);
             $repository->setMapper($this->getMapper());
+            
             $repository->setContext($this->getContext());
 
             $this->storeRepository->attach($classEntity, $repository);
