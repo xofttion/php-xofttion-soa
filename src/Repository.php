@@ -145,10 +145,10 @@ class Repository implements IRepository {
     /**
      * 
      * @param IEntity $entity
-     * @param IModel $model
+     * @param IModel|null $model
      * @return void
      */
-    protected function mapper(IEntity $entity, IModel $model): void {
+    protected function mapper(IEntity $entity, ?IModel $model): void {
         if (!is_null($model)) {
             $this->getMapper()->clean()->ofArray($entity, $model->toArray());
         } // Mapeando modelo en entidad

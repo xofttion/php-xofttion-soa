@@ -12,6 +12,6 @@ class BelongTo extends Aggregation {
      * @param string $column
      */
     public function __construct(string $class, string $column) {
-        parent::__construct($class, false, false, false, false, $column);
+        parent::__construct($class, false, false, false, true, $column);
     }
 }

@@ -251,6 +251,7 @@ class UnitOfWork implements IUnitOfWork {
      */
     protected function setBelongAggregations(IEntity $entity): void {
         $belongs    = $this->getAggregationsStorage()->belong($entity);
+        
         $reflection = new ReflectionClass($entity);
         
         foreach ($belongs as $aggregation) {
