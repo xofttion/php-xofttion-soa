@@ -2,8 +2,8 @@
 
 namespace Xofttion\SOA;
 
-use Xofttion\Kernel\Structs\DataDictionary;
+use Xofttion\Kernel\Structs\Json;
 
-class StoreRepository extends DataDictionary {
+class StoreRepository extends Json {
     
 }

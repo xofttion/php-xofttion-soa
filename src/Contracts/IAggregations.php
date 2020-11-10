@@ -68,6 +68,14 @@ interface IAggregations {
      * @return IAggregations
      */
     public function containTo(string $key, string $class): IAggregations;
+    
+    /**
+     * 
+     * @param string $key
+     * @param string $class
+     * @return IAggregations
+     */
+    public function containsTo(string $key, string $class): IAggregations;
 
     /**
      * 

@@ -57,6 +57,12 @@ interface IEntity extends JsonSerializable {
      * @return array
      */
     public function getInoperativesKeys(): array;
+    
+    /**
+     * 
+     * @return array
+     */
+    public function getNulleables(): array;
 
     /**
      * 

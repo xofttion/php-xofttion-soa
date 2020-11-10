@@ -4,7 +4,7 @@ namespace Xofttion\SOA\Utils;
 
 use Closure;
 
-use Xofttion\Kernel\Structs\DataDictionary;
+use Xofttion\Kernel\Structs\Json;
 
 use Xofttion\SOA\Contracts\IAggregationsKeys;
 use Xofttion\SOA\Contracts\IAggregation;
@@ -16,7 +16,7 @@ class Aggregations implements IAggregations {
     
     /**
      *
-     * @var DataDictionary 
+     * @var Json 
      */
     private $aggregations;
     
@@ -26,7 +26,7 @@ class Aggregations implements IAggregations {
      * 
      */
     public function __construct() {
-        $this->aggregations = new DataDictionary();
+        $this->aggregations = new Json();
     }
     
     // Métodos de la clase Aggregations
@@ -86,6 +86,10 @@ class Aggregations implements IAggregations {
     
     public function containTo(string $key, string $class): IAggregations {
         return $this->attach($key, new ContainTo($class)); 
+    }
+    
+    public function containsTo(string $key, string $class): IAggregations {
+        return $this->attach($key, new ContainsTo($class)); 
     }
     
     public function keys(): IAggregationsKeys {

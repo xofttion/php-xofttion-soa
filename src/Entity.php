@@ -58,12 +58,18 @@ class Entity implements IEntity {
     public function getProtectedsKeys(): array {
         return $this->protecteds;
     }
+    
+    public function getNulleables(): array {
+        $class_model = $this->getTable(); // Clase Model del ORM
+        
+        return (new $class_model())->getNulleables();
+    }
 
     public function toArray(): array {
         return EntityToArray::getInstance()->forTransaction($this);
     }
 
     public function jsonSerialize() {
-        return EntityToArray::getInstance()->forRequest($this);
+        return EntityToArray::getInstance()->forRequest($this, [$this]);
     }
 }

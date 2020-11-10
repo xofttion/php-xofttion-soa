@@ -330,7 +330,7 @@ class UnitOfWork implements IUnitOfWork {
      */
     protected function update(IEntity $entity, StatusEntity $status): void {
         if ($status->getEntity() != $entity) {
-            $data = $this->getArrayUpdate($entity, $status->getEntity());
+            $data = $this->getArrayUpdate($entity, $status->getEntity()); // Datos para actualizar
 
             $this->getRepository(get_class($entity))->update($entity->getPrimaryKey(), $data);
         } // Entidad modificada, requiere ser actualizada en el Repositorio
@@ -345,15 +345,23 @@ class UnitOfWork implements IUnitOfWork {
     protected function getArrayUpdate(IEntity $entity, IEntity $clone): array {
         $arrayUpdate = []; // Array para actualizar
         
+        $nulleables  = $entity->getNulleables();
+        
         $arrayEntity = $entity->toArray();
         $arrayClone  = $clone->toArray();
         
         foreach ($arrayEntity as $key => $value) {
             if (!isset($arrayClone[$key])) {
                 $arrayUpdate[$key] = $value;
-            } else if (($value != $arrayClone[$key])) {
+            } // Se detecto que la clave no esta definida
+            
+            else if (($value != $arrayClone[$key])) {
                 $arrayUpdate[$key] = $value;
             } // Se detecto valor diferente en la clave
+            
+            else if (in_array($key, $nulleables)) {
+                $arrayUpdate[$key] = $value;
+            } // Se detecto que valor no debe ser null
         }
         
         return $arrayUpdate; // Retornando datos de actualización

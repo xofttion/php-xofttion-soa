@@ -6,6 +6,8 @@ use IteratorAggregate;
 use Countable;
 use JsonSerializable;
 
+use Xofttion\Kernel\Contracts\IJson;
+
 interface IEntityCollection extends IteratorAggregate, Countable, JsonSerializable {
     
     // Métodos de la interfaz IEntityCollection
@@ -67,4 +69,10 @@ interface IEntityCollection extends IteratorAggregate, Countable, JsonSerializab
      * @return array
      */
     public function toArray(): array;
+
+    /**
+     * 
+     * @return IJson
+     */
+    public function toJson(): IJson;
 }

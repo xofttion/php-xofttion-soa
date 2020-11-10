@@ -46,39 +46,38 @@ class EntityToArray {
     /**
      * 
      * @param IEntity $entity
+     * @param array $superParents
      * @return array
      */
-    public function forTransaction(IEntity $entity): array {
-        return $this->execute($entity, function (IEntity $entityClosure) {
-            return $entityClosure->getInoperativesKeys();
-        });
+    public function forTransaction(IEntity $entity, array $superParents = []): array {
+        return $this->execute($entity, $superParents, function (IEntity $entityClosure) { return $entityClosure->getInoperativesKeys(); });
     }
     
     /**
      * 
      * @param IEntity $entity
+     * @param array $superParents
      * @return array
      */
-    public function forRequest(IEntity $entity): array {
-        return $this->execute($entity, function (IEntity $entityClosure) {
-            return $entityClosure->getProtectedsKeys();
-        });
+    public function forRequest(IEntity $entity, array $superParents = null): array {
+        return $this->execute($entity, $superParents, function (IEntity $entityClosure) { return $entityClosure->getProtectedsKeys(); });
     }
 
     /**
      * 
      * @param IEntity $entity
+     * @param array $superParents
      * @param Closure|null $closure
      * @return array
      */
-    public function execute(IEntity $entity, ?Closure $closure): array {
+    public function execute(IEntity $entity, array $superParents = [], ?Closure $closure = null): array {
         $reflection = new ReflectionClass($entity);
         $result     = []; // Array de entidad
         $discards   = is_null($closure) ? [] : $closure($entity);
         
         foreach ($reflection->getProperties() as $property) {
             if (!in_array($property->getName(), $discards)) { 
-                $value = $this->getValueKeyEntity($reflection, $property, $entity, $closure);
+                $value = $this->getValueKeyEntity($reflection, $property, $entity, $superParents, $closure);
 
                 if (!is_null($value)) {
                     $result[$property->getName()] = $value; // Estableciendo
@@ -94,26 +93,34 @@ class EntityToArray {
      * @param ReflectionClass $reflection
      * @param ReflectionProperty $property
      * @param IEntity $entity
+     * @param array $superParents
      * @param Closure|null $closure
      * @return object
      */
-    private function getValueKeyEntity(ReflectionClass $reflection, ReflectionProperty $property, IEntity $entity, ?Closure $closure) {
-        $value = ($property->isPublic()) ? $property->getValue($entity) :
-            $this->getValueMethodEntity($reflection, $property, $entity);
+    private function getValueKeyEntity(ReflectionClass $reflection, ReflectionProperty $property, IEntity $entity, array $superParents = [], ?Closure $closure = null) {
+        if ($property->isPublic()) {
+            $value = $property->getValue($entity); // Accediendo directamente a la propiedad
+        } else {
+            $value = $this->getValueMethodEntity($reflection, $property, $entity);
+        }
 
         if ($value instanceof IEntity) {
-            return $this->execute($value, $closure); // Procesando entidad
+            if ((in_array($value, $superParents)) || ($value === $entity)) {
+                return null; // Se retorna null para controlar recuisividad infinita
+            } else {
+                array_push($superParents, $value); return $this->execute($value, $superParents, $closure);
+            }
         } else if ($value instanceof IEntityCollection) {
             $collection = []; // Colección de datos
             
-            foreach ($value as $itemEntity) {
-                array_push($collection, $this->execute($itemEntity, $closure));
+            foreach ($value as $entityCollection) {
+                array_push($collection, $this->execute($entityCollection, $superParents, $closure));
             }
             
-            return $collection; // Retornando colección
+            return $collection; // Retornando la colección generada de entidades
         }
         
-        return $value; // Retornando valor de la property
+        return $value; // Retornando valor generado de la propiedad de la entidad
     }
 
     /**

@@ -5,6 +5,8 @@ namespace Xofttion\SOA;
 use Traversable;
 use ArrayIterator;
 
+use Xofttion\Kernel\Contracts\IJson;
+use Xofttion\Kernel\Structs\Json;
 use Xofttion\SOA\Contracts\IEntity;
 use Xofttion\SOA\Contracts\IEntityCollection;
 
@@ -70,6 +72,18 @@ class EntityCollection implements IEntityCollection {
         }, $this->entities); // Datos para transacción
     }
     
+    public function toJson(): IJson {
+        $json = $this->getInstanceJson(); // Json 
+        
+        foreach ($this->entities as $entity) {
+            if (is_defined($entity->getId())) {
+                $json->attach($entity->getId(), $entity);
+            }
+        }
+        
+        return $json; // Retornando json generado
+    }
+    
     public function jsonSerialize() {
         return array_map(function (IEntity $entity) { 
             return $entity->jsonSerialize(); 
@@ -82,5 +96,32 @@ class EntityCollection implements IEntityCollection {
 
     public function getIterator(): Traversable {
         return new ArrayIterator($this->entities);
+    }
+    
+    // Métodos de la clase EntityCollection
+    
+    /**
+     * 
+     * @return IJson
+     */
+    protected function getInstanceJson(): IJson {
+        return new Json();
+    }
+
+    // Métodos estáticos de la clase EntityCollection
+    
+    /**
+     * 
+     * @param array $array
+     * @return IEntityCollection
+     */
+    public static function buildOfArray(array $array): IEntityCollection {
+        $entityCollection = new static(); // Instanciando colección
+        
+        foreach ($array as $arrayEntity) {
+            $entityCollection->attach($arrayEntity); // Cargando
+        }
+        
+        return $entityCollection; // Retornando colección construida
     }
 }
