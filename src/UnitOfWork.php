@@ -2,12 +2,8 @@
 
 namespace Xofttion\SOA;
 
-use ReflectionClass;
-
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Capsule\Manager;
-
-use Xofttion\Kernel\Utils\Reflection;
 
 use Xofttion\SOA\Contracts\IUnitOfWork;
 use Xofttion\SOA\Contracts\IRepository;
@@ -16,6 +12,7 @@ use Xofttion\SOA\Contracts\IEntityCollection;
 use Xofttion\SOA\Contracts\IAggregationsStorage;
 use Xofttion\SOA\Contracts\IEntityMapper;
 use Xofttion\SOA\Utils\AggregationsStorage;
+use Xofttion\SOA\Utils\ReflectiveEntity;
 
 class UnitOfWork implements IUnitOfWork {
     
@@ -252,19 +249,16 @@ class UnitOfWork implements IUnitOfWork {
     protected function setBelongAggregations(IEntity $entity): void {
         $belongs    = $this->getAggregationsStorage()->belong($entity);
         
-        $reflection = new ReflectionClass($entity);
+        $reflective = new ReflectiveEntity($entity);
         
         foreach ($belongs as $aggregation) {
-            $entityAggregation = $belongs->getValue($aggregation);
+            $entityAggregation = $belongs->getValue($aggregation); // Agregación superior de entidad
             
             if (is_null($entityAggregation->getPrimaryKey())) {
                 $this->persist($entityAggregation); // Persistiendo entidad
             }
             
-            $valuePK = $entityAggregation->getPrimaryKey();
-            $namePK  = $aggregation->getColumn();
-            
-            Reflection::assingSetter($entity, $namePK, $valuePK, $reflection);
+            $reflective->setSetter($aggregation->getColumn(), $entityAggregation->getPrimaryKey());
         }
     }
 

@@ -2,14 +2,11 @@
 
 namespace Xofttion\SOA\Utils;
 
-use ReflectionClass;
-
-use Xofttion\Kernel\Utils\Reflection;
-
 use Xofttion\SOA\Contracts\IEntity;
 use Xofttion\SOA\Contracts\IEntityCollection;
 use Xofttion\SOA\Contracts\IEntityMapper;
 use Xofttion\SOA\EntityCollection;
+use Xofttion\SOA\Utils\ReflectiveEntity;
 
 class EntityMapper implements IEntityMapper {
     
@@ -17,20 +14,20 @@ class EntityMapper implements IEntityMapper {
     
     /**
      *
-     * @var array 
-     */
-    private $entities = [];
-    
-    /**
-     *
      * @var IEntityMapper 
      */
     private static $instance = null;
     
+    /**
+     *
+     * @var array 
+     */
+    private $entities;
+    
     // Constructor de la clase IEntityMapper
     
     private function __construct() {
-        
+        $this->entities = [];
     }
     
     // Métodos estáticos de la clase IEntityMapper
@@ -50,19 +47,19 @@ class EntityMapper implements IEntityMapper {
     // Métodos sobrescritos de la interfaz IEntityMapper
     
     public function ofArray(IEntity $entity, ?array $data): ?IEntity {
-        if (is_null($data)) { 
-            return null; // No se ha definido origen de datos
+        if (is_defined($data)) { 
+            $reflective = new ReflectiveEntity($entity); // Iniciando reflexión
+
+            foreach ($data as $propertyName => $value) {
+                $this->setValueEntity($reflective, $propertyName, $value);
+            }
+
+            array_push($this->entities, $entity); // Agregando
+
+            return $entity; // Retornando entidad con sus atributos mapeados
         } 
         
-        $reflection = new ReflectionClass($entity);
-        
-        foreach ($data as $key => $value) {
-            $this->setValueKeyEntity($reflection, $entity, $key, $value);
-        } // Recorriendo claves y valores del origen
-        
-        array_push($this->entities, $entity); // Agregando
-        
-        return $entity; // Retornando entidad con sus atributos mapeados
+        return null; // No se ha definido origen de datos
     }
     
     public function clean(): IEntityMapper {
@@ -77,39 +74,38 @@ class EntityMapper implements IEntityMapper {
     
     /**
      * 
-     * @param ReflectionClass $reflection
-     * @param IEntity $entity
-     * @param string $key
+     * @param ReflectiveEntity $reflective
+     * @param string $propertyName
      * @param object $value
      * @return void
      */
-    protected function setValueKeyEntity(ReflectionClass $reflection, IEntity $entity, string $key, $value): void {
-        Reflection::assingSetter($entity, $key, $this->getValue($entity, $key, $value), $reflection);
+    protected function setValueEntity(ReflectiveEntity $reflective, string $propertyName, $value): void {
+        $reflective->setSetter($propertyName, $this->getValue($reflective->getEntity(), $propertyName, $value));
     }
 
     /**
      * 
      * @param IEntity $entity
-     * @param string $key
+     * @param string $propertyName
      * @param object $value
      * @return object|null
      */
-    protected function getValue(IEntity $entity, string $key, $value) {
-        if (is_null($value)) { 
-            return null; // Valor indefinido, no se debe gestionar dato
+    protected function getValue(IEntity $entity, string $propertyName, $value) {
+        if (is_defined($value)) { 
+            if ($entity->getAggregations()->contains($propertyName)) {
+                $aggregation = $entity->getAggregations()->getValue($propertyName);
+
+                if ($aggregation->isArray()) {
+                    return $this->createCollection($aggregation->getClass(), $value);
+                } else {
+                    return $this->createEntity($aggregation->getClass(), $value);
+                }
+            }
+
+            return $value; // Retornando el valor del atributo predeterminado
         } 
         
-        if ($entity->getAggregations()->contains($key)) {
-            $aggregation = $entity->getAggregations()->getValue($key); 
-            
-            if ($aggregation->isArray()) {
-                return $this->createCollection($aggregation->getClass(), $value);
-            } else {
-                return $this->createEntity($aggregation->getClass(), $value);
-            }
-        }
-        
-        return $value; // Retornando el valor del atributo predeterminado
+        return null; // Valor indefinido, no se debe gestionar propiedade de entidad
     }
     
     /**
