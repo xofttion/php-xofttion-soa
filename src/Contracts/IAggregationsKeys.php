@@ -2,28 +2,29 @@
 
 namespace Xofttion\SOA\Contracts;
 
-interface IAggregationsKeys {
-    
+interface IAggregationsKeys
+{
+
     // Métodos de la interfaz IAggregationsKeys
-    
+
     /**
      * 
      * @return array
      */
     public function all(): array;
-    
+
     /**
      * 
      * @return array
      */
     public function cascade(): array;
-    
+
     /**
      * 
      * @return array
      */
-    public function composed(): array;
-    
+    public function refresh(): array;
+
     /**
      * 
      * @return array

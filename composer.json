@@ -16,7 +16,7 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "xofttion/orm": "dev-master"
+        "xofttion/orm": "5.8.x-dev"
     },
     "autoload": {
         "psr-4": {

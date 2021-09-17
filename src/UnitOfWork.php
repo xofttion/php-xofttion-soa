@@ -2,13 +2,8 @@
 
 namespace Xofttion\SOA;
 
-use ReflectionClass;
-
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Capsule\Manager;
-
-use Xofttion\Kernel\Utils\Reflection;
-
 use Xofttion\SOA\Contracts\IUnitOfWork;
 use Xofttion\SOA\Contracts\IRepository;
 use Xofttion\SOA\Contracts\IEntity;
@@ -16,17 +11,19 @@ use Xofttion\SOA\Contracts\IEntityCollection;
 use Xofttion\SOA\Contracts\IAggregationsStorage;
 use Xofttion\SOA\Contracts\IEntityMapper;
 use Xofttion\SOA\Utils\AggregationsStorage;
+use Xofttion\SOA\Utils\ReflectiveEntity;
 
-class UnitOfWork implements IUnitOfWork {
-    
+class UnitOfWork implements IUnitOfWork
+{
+
     // Atributos de la clase UnitOfWork
-    
+
     /**
      *
      * @var Manager 
      */
     protected $connectionManager;
-    
+
     /**
      *
      * @var ConnectionInterface 
@@ -38,163 +35,185 @@ class UnitOfWork implements IUnitOfWork {
      * @var string
      */
     private $context;
-    
+
     /**
      *
      * @var IEntityMapper 
      */
     private $entityMapper;
-    
+
     /**
      *
      * @var int 
      */
     private $time;
-    
+
     /**
      *
      * @var StoreEntity 
      */
     protected $storeEntity;
-    
+
     /**
      *
      * @var StoreRepository 
      */
     protected $storeRepository;
-    
+
     // Constructor de la clase UnitOfWork
-    
-    public function __construct() {
+
+    public function __construct()
+    {
         $this->time = time();
     }
 
     // Métodos sobrescritos de la interfaz IUnitOfWork
-    
-    public function setConnectionManager(?Manager $connectionManager): void {
+
+    public function setConnectionManager(?Manager $connectionManager): void
+    {
         $this->connectionManager = $connectionManager;
     }
 
-    public function setContext(?string $context): void {
+    public function setContext(?string $context): void
+    {
         $this->context = $context;
     }
 
-    public function getContext(): ?string {
+    public function getContext(): ?string
+    {
         return $this->context;
     }
-    
-    public function getNow(): int {
+
+    public function getNow(): int
+    {
         return $this->time;
     }
 
-    public function getRepository(string $classEntity): ?IRepository {
+    public function getRepository(string $classEntity): ?IRepository
+    {
         if (!$this->storeRepository->contains($classEntity)) {
             $repository = $this->getInstanceRepository($classEntity);
             $repository->setUnitOfWork($this);
             $repository->setMapper($this->getMapper());
-            
+
             $repository->setContext($this->getContext());
 
             $this->storeRepository->attach($classEntity, $repository);
-        } // No existe estancia del repositorio, definiendo repositorio
-        
-        return $this->storeRepository->getValue($classEntity); // Repositorio
+        }
+
+        return $this->storeRepository->getValue($classEntity);
     }
-    
-    public function setMapper(?IEntityMapper $entityMapper): void {
+
+    public function setMapper(?IEntityMapper $entityMapper): void
+    {
         $this->entityMapper = $entityMapper;
     }
-    
-    public function getMapper(): ?IEntityMapper {
+
+    public function getMapper(): ?IEntityMapper
+    {
         return $this->entityMapper;
     }
-    
-    public function attach(IEntity $entity): void {
+
+    public function attach(IEntity $entity): void
+    {
         $this->storeEntity->attach($entity, new StatusEntity(StatusEntity::STATE_DIRTY, clone $entity));
     }
-    
-    public function attachCollection(array $entities): void {
-        foreach ($entities as $entity) { 
+
+    public function attachCollection(array $entities): void
+    {
+        foreach ($entities as $entity) {
             if ($entity instanceof IEntity) {
-                $this->attach($entity); // Cargando entidad del listado
+                $this->attach($entity);
             }
         }
     }
-    
-    public function persist(IEntity $entity): void {
-        $this->setBelongAggregations($entity); // Cargando referencias
-        
-        $this->insert($entity); // Registrando entidad principal
-        
+
+    public function persist(IEntity $entity): void
+    {
+        $this->setBelongAggregations($entity);
+
+        $this->insert($entity);
+
         $cascades = $this->getAggregationsStorage()->cascade($entity);
-        
+
         foreach ($cascades as $aggregation) {
             $this->insertAggregation($entity, $cascades->getValue($aggregation));
-        } // Registrando listado de agregaciones en cascada
-    }
-    
-    public function persists(IEntityCollection $collection): void {
-        foreach ($collection as $entity) {
-            $this->persist($entity); // Persistiendo entidad de colección
         }
     }
-    
-    public function safeguard(IEntity $entity): void {
-        $this->modify($entity); // Actualizando entidad principal
-        
+
+    public function persists(IEntityCollection $collection): void
+    {
+        foreach ($collection as $entity) {
+            $this->persist($entity);
+        }
+    }
+
+    public function safeguard(IEntity $entity): void
+    {
+        $this->modify($entity);
+
         $cascades = $this->getAggregationsStorage()->cascade($entity);
-        
+
         foreach ($cascades as $aggregation) {
             $this->modifyAggregation($entity, $cascades->getValue($aggregation));
-        } // Actualizando listado de agregaciones en cascada
-    }
-    
-    public function safeguards(IEntityCollection $collection): void {
-        foreach ($collection as $entity) {
-            $this->safeguard($entity); // Actualizando entidad de colección
         }
     }
-                
-    public function destroy(IEntity $entity): void {
+
+    public function safeguards(IEntityCollection $collection): void
+    {
+        foreach ($collection as $entity) {
+            $this->safeguard($entity);
+        }
+    }
+
+    public function destroy(IEntity $entity): void
+    {
         $this->storeEntity->attach($entity, new StatusEntity(StatusEntity::STATE_REMOVE));
     }
-    
-    public function destroys(IEntityCollection $collection): void {
+
+    public function destroys(IEntityCollection $collection): void
+    {
         foreach ($collection as $entity) {
-            $this->destroy($entity); // Eliminando entidad de colección
+            $this->destroy($entity);
         }
     }
 
-    public function transaction(): void {
-        $this->getConnection()->beginTransaction(); // Iniciando transacción
+    public function transaction(): void
+    {
+        $this->getConnection()->beginTransaction();
     }
 
-    public function commit(): void {
+    public function commit(): void
+    {
         foreach ($this->storeEntity as $entity) {
-            $entityStatus = $this->storeEntity->getValue($entity); // Datos
-            
+            $entityStatus = $this->storeEntity->getValue($entity);
+
             switch ($entityStatus->getStatus()) {
-                case (StatusEntity::STATE_DIRTY) :
-                    $this->update($entity, $entityStatus); // Actualizando
-                break;
-            
-                case (StatusEntity::STATE_NEW) :
-                    // Se debería registrar la entidad
-                break;
-            
-                case (StatusEntity::STATE_REMOVE) :
-                    $this->delete($entity); // Eliminando
-                break;
+                case (StatusEntity::STATE_DIRTY): {
+                    $this->update($entity, $entityStatus);
+                    break;
+                }
+
+                case (StatusEntity::STATE_NEW): {
+                    break;
+                }
+
+                case (StatusEntity::STATE_REMOVE): {
+                    $this->delete($entity);
+                    break;
+                }
             }
         }
-        
-        $this->storeEntity->clear(); $this->getConnection()->commit(); // Confirmando comandos
+
+        $this->storeEntity->clear();
+        $this->getConnection()->commit();
     }
 
-    public function rollback(): void {
-        $this->getConnection()->rollback(); // Revertiendo todos los comandos
+    public function rollback(): void
+    {
+        $this->getConnection()->rollback();
     }
-    
+
     // Métodos de la clase UnitOfWork
 
     /**
@@ -202,69 +221,72 @@ class UnitOfWork implements IUnitOfWork {
      * @param StoreEntity $storeEntity
      * @return void
      */
-    public function setStoreEntity(StoreEntity $storeEntity): void {
+    public function setStoreEntity(StoreEntity $storeEntity): void
+    {
         $this->storeEntity = $storeEntity;
     }
-    
+
     /**
      * 
      * @param StoreRepository $storeRepository
      * @return void
      */
-    public function setStoreRepository(StoreRepository $storeRepository): void {
+    public function setStoreRepository(StoreRepository $storeRepository): void
+    {
         $this->storeRepository = $storeRepository;
     }
-    
+
     /**
      * 
      * @return ConnectionInterface
      */
-    protected function getConnection(): ConnectionInterface {
+    protected function getConnection(): ConnectionInterface
+    {
         if (is_null($this->connection)) {
             $this->connection = $this->getConnectionInterface();
-        } // Definiendo conexión de la transacción 
-        
-        return $this->connection; // Conexión con base de datos
+        }
+
+        return $this->connection;
     }
-    
+
     /**
      * 
      * @return ConnectionInterface
      */
-    protected function getConnectionInterface(): ConnectionInterface {
+    protected function getConnectionInterface(): ConnectionInterface
+    {
         return $this->connectionManager->getConnection($this->getContext());
     }
-    
+
     /**
      * 
      * @param string $classEntity
      * @return IRepository
      */
-    protected function getInstanceRepository(string $classEntity): IRepository {
+    protected function getInstanceRepository(string $classEntity): IRepository
+    {
         return new Repository($classEntity);
     }
-    
+
     /**
      * 
      * @param IEntity $entity
      * @return void
      */
-    protected function setBelongAggregations(IEntity $entity): void {
-        $belongs    = $this->getAggregationsStorage()->belong($entity);
-        
-        $reflection = new ReflectionClass($entity);
-        
+    protected function setBelongAggregations(IEntity $entity): void
+    {
+        $belongs = $this->getAggregationsStorage()->belong($entity);
+
+        $reflective = new ReflectiveEntity($entity);
+
         foreach ($belongs as $aggregation) {
             $entityAggregation = $belongs->getValue($aggregation);
-            
+
             if (is_null($entityAggregation->getPrimaryKey())) {
-                $this->persist($entityAggregation); // Persistiendo entidad
+                $this->persist($entityAggregation);
             }
-            
-            $valuePK = $entityAggregation->getPrimaryKey();
-            $namePK  = $aggregation->getColumn();
-            
-            Reflection::assingSetter($entity, $namePK, $valuePK, $reflection);
+
+            $reflective->setSetter($aggregation->getColumn(), $entityAggregation->getPrimaryKey());
         }
     }
 
@@ -273,8 +295,10 @@ class UnitOfWork implements IUnitOfWork {
      * @param IEntity $entity
      * @return void
      */
-    protected function insert(IEntity $entity): void {
-        $this->getRepository(get_class($entity))->insert($entity); $this->attach($entity); 
+    protected function insert(IEntity $entity): void
+    {
+        $this->getRepository(get_class($entity))->insert($entity);
+        $this->attach($entity);
     }
 
     /**
@@ -283,24 +307,28 @@ class UnitOfWork implements IUnitOfWork {
      * @param object $aggregation
      * @return void
      */
-    protected function insertAggregation(IEntity $parent, $aggregation): void {
+    protected function insertAggregation(IEntity $parent, $aggregation): void
+    {
         if ($aggregation instanceof IEntity) {
-            $aggregation->setParentKey($parent->getPrimaryKey()); $this->persist($aggregation);
-        } // Agregación del padre es una entidad simple
+            $aggregation->setParentKey($parent->getPrimaryKey());
+            $this->persist($aggregation);
+        }
 
         if ($aggregation instanceof IEntityCollection) {
             foreach ($aggregation as $entity) {
-                $entity->setParentKey($parent->getPrimaryKey()); $this->persist($entity);
+                $entity->setParentKey($parent->getPrimaryKey());
+                $this->persist($entity);
             }
-        } // Agregación del padre es un listado de entidades
+        }
     }
-    
+
     /**
      * 
      * @param IEntity $entity
      * @return void
      */
-    protected function modify(IEntity $entity): void  {
+    protected function modify(IEntity $entity): void
+    {
         $this->getRepository(get_class($entity))->safeguard($entity);
     }
 
@@ -310,16 +338,19 @@ class UnitOfWork implements IUnitOfWork {
      * @param object $aggregation
      * @return void
      */
-    protected function modifyAggregation(IEntity $parent, $aggregation): void {
+    protected function modifyAggregation(IEntity $parent, $aggregation): void
+    {
         if ($aggregation instanceof IEntity) {
-            $aggregation->setParentKey($parent->getPrimaryKey()); $this->safeguard($aggregation);
-        } // Agregación del padre es una entidad simple
+            $aggregation->setParentKey($parent->getPrimaryKey());
+            $this->safeguard($aggregation);
+        }
 
         if ($aggregation instanceof IEntityCollection) {
             foreach ($aggregation as $entity) {
-                $entity->setParentKey($parent->getPrimaryKey()); $this->safeguard($entity);
+                $entity->setParentKey($parent->getPrimaryKey());
+                $this->safeguard($entity);
             }
-        } // Agregación del padre es un listado de entidades
+        }
     }
 
     /**
@@ -328,51 +359,54 @@ class UnitOfWork implements IUnitOfWork {
      * @param StatusEntity $status
      * @return void
      */
-    protected function update(IEntity $entity, StatusEntity $status): void {
+    protected function update(IEntity $entity, StatusEntity $status): void
+    {
         if ($status->getEntity() != $entity) {
-            $data = $this->getArrayUpdate($entity, $status->getEntity()); // Datos para actualizar
+            $data = $this->getArrayUpdate($entity, $status->getEntity());
 
-            $this->getRepository(get_class($entity))->update($entity->getPrimaryKey(), $data);
-        } // Entidad modificada, requiere ser actualizada en el Repositorio
+            $repository = $this->getRepository(get_class($entity));
+
+            $repository->update($entity->getPrimaryKey(), $data);
+        }
     }
-    
+
     /**
      * 
      * @param IEntity $entity
      * @param IEntity $clone
      * @return array
      */
-    protected function getArrayUpdate(IEntity $entity, IEntity $clone): array {
-        $arrayUpdate = []; // Array para actualizar
-        
-        $nulleables  = $entity->getNulleables();
-        
+    protected function getArrayUpdate(IEntity $entity, IEntity $clone): array
+    {
+        $nulleables = $entity->getNulleables();
+
         $arrayEntity = $entity->toArray();
-        $arrayClone  = $clone->toArray();
-        
+        $arrayClone = $clone->toArray();
+
+        $arrayUpdate = [];
+
         foreach ($arrayEntity as $key => $value) {
             if (!isset($arrayClone[$key])) {
                 $arrayUpdate[$key] = $value;
-            } // Se detecto que la clave no esta definida
-            
+            }
             else if (($value != $arrayClone[$key])) {
                 $arrayUpdate[$key] = $value;
-            } // Se detecto valor diferente en la clave
-            
+            }
             else if (in_array($key, $nulleables)) {
                 $arrayUpdate[$key] = $value;
-            } // Se detecto que valor no debe ser null
+            }
         }
-        
-        return $arrayUpdate; // Retornando datos de actualización
+
+        return $arrayUpdate;
     }
-    
+
     /**
      * 
      * @param IEntity $entity
      * @return void
      */
-    protected function delete(IEntity $entity): void {
+    protected function delete(IEntity $entity): void
+    {
         $this->getRepository(get_class($entity))->delete($entity);
     }
 
@@ -380,7 +414,8 @@ class UnitOfWork implements IUnitOfWork {
      * 
      * @return IAggregationsStorage
      */
-    protected function getAggregationsStorage(): IAggregationsStorage {
+    protected function getAggregationsStorage(): IAggregationsStorage
+    {
         return AggregationsStorage::getInstance();
     }
 }
