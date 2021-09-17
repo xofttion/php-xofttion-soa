@@ -2,8 +2,9 @@
 
 namespace Xofttion\SOA\Contracts;
 
-interface IEntityMapper {
-    
+interface IEntityMapper
+{
+
     // Métodos de la interfaz IEntityMapper
 
     /**
@@ -13,13 +14,13 @@ interface IEntityMapper {
      * @return IEntity|null
      */
     public function ofArray(IEntity $entity, ?array $source): ?IEntity;
-    
+
     /**
      * 
      * @return IEntityMapper
      */
     public function clean(): IEntityMapper;
-    
+
     /**
      * 
      * @return array

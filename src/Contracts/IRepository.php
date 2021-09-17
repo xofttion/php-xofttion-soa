@@ -2,30 +2,31 @@
 
 namespace Xofttion\SOA\Contracts;
 
-interface IRepository {
-    
+interface IRepository
+{
+
     // Métodos de la interfaz IRepository
-    
+
     /**
      * 
      * @param string|null $context
      * @return void
      */
     public function setContext(?string $context): void;
-    
+
     /**
      * 
      * @return string|null
      */
     public function getContext(): ?string;
-    
+
     /**
      * 
      * @param IEntityMapper|null $entityMapper
      * @return void
      */
     public function setMapper(?IEntityMapper $entityMapper): void;
-    
+
     /**
      * 
      * @return IEntityMapper|null
@@ -38,7 +39,7 @@ interface IRepository {
      * @return void
      */
     public function setUnitOfWork(?IUnitOfWork $unitOfWork): void;
-    
+
     /**
      * 
      * @return IUnitOfWork|null
@@ -57,7 +58,7 @@ interface IRepository {
      * @return void
      */
     public function insert(IEntity $entity): void;
-    
+
     /**
      * 
      * @return IEntityCollection
@@ -70,7 +71,7 @@ interface IRepository {
      * @return IEntity|null
      */
     public function find(int $id): ?IEntity;
-    
+
     /**
      * 
      * @param array|null $aggregations
@@ -85,13 +86,13 @@ interface IRepository {
      * @return IEntity|null
      */
     public function fetch(int $id, ?array $aggregations = null): ?IEntity;
-    
+
     /**
      * 
      * @return IEntityCollection
      */
     public function resources(): IEntityCollection;
-    
+
     /**
      * 
      * @param int $id
@@ -99,14 +100,14 @@ interface IRepository {
      * @return void
      */
     public function update(int $id, array $data): void;
-    
+
     /**
      * 
      * @param IEntity $entity
      * @return void
      */
     public function safeguard(IEntity $entity): void;
-    
+
     /**
      * 
      * @param IEntity $entity

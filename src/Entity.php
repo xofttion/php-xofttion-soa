@@ -7,16 +7,17 @@ use Xofttion\SOA\Contracts\IAggregations;
 use Xofttion\SOA\Utils\Aggregations;
 use Xofttion\SOA\Utils\EntityToArray;
 
-class Entity implements IEntity {
-    
+class Entity implements IEntity
+{
+
     // Atributos de la clase Entity
-    
+
     /**
      *
      * @var array 
      */
     protected $inoperatives = [];
-    
+
     /**
      *
      * @var array 
@@ -25,51 +26,62 @@ class Entity implements IEntity {
 
     // Métodos sobrescritos de la interfaz IEntity
 
-    public function setPrimaryKey(int $primaryKey): void {
-        
+    public function setPrimaryKey(int $primaryKey): void
+    {
+
     }
 
-    public function getPrimaryKey(): ?int {
+    public function getPrimaryKey(): ?int
+    {
         return null;
     }
 
-    public function setParentKey(int $parentKey): void {
-        
+    public function setParentKey(int $parentKey): void
+    {
+
     }
 
-    public function getParentKey(): ?int {
+    public function getParentKey(): ?int
+    {
         return null;
     }
-    
-    public function getTable(): string {
+
+    public function getTable(): string
+    {
         return "entity";
     }
 
-    public function getAggregations(): IAggregations {
+    public function getAggregations(): IAggregations
+    {
         return new Aggregations();
     }
 
-    public function getInoperativesKeys(): array {
+    public function getInoperativesKeys(): array
+    {
         $aggregations = $this->getAggregations()->keys()->all();
-        
+
         return array_merge($this->inoperatives, $aggregations);
     }
 
-    public function getProtectedsKeys(): array {
+    public function getProtectedsKeys(): array
+    {
         return $this->protecteds;
     }
-    
-    public function getNulleables(): array {
+
+    public function getNulleables(): array
+    {
         $class_model = $this->getTable(); // Clase Model del ORM
-        
+
         return (new $class_model())->getNulleables();
     }
 
-    public function toArray(): array {
+    public function toArray(): array
+    {
         return EntityToArray::getInstance()->forTransaction($this);
     }
 
-    public function jsonSerialize() {
+    public function jsonSerialize()
+    {
         return EntityToArray::getInstance()->forRequest($this, [$this]);
     }
 }

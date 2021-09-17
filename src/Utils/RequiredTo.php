@@ -2,10 +2,10 @@
 
 namespace Xofttion\SOA\Utils;
 
-class BelongTo extends Aggregation
+class RequiredTo extends Aggregation
 {
 
-    // Constructor de la clase BelongTo
+    // Constructor de la clase RequiredTo
 
     /**
      * 
@@ -14,6 +14,6 @@ class BelongTo extends Aggregation
      */
     public function __construct(string $class, string $column)
     {
-        parent::__construct($class, false, false, false, true, $column);
+        parent::__construct($class, false, false, true, true, $column);
     }
 }

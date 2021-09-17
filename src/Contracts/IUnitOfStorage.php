@@ -4,15 +4,14 @@ namespace Xofttion\SOA\Contracts;
 
 use Illuminate\Database\Capsule\Manager;
 use Illuminate\Database\Eloquent\Collection;
-
 use Xofttion\ORM\Contracts\IModel;
-
 use Xofttion\SOA\Contracts\IStorage;
 
-interface IUnitOfStorage {
-    
+interface IUnitOfStorage
+{
+
     // Métodos de la interfaz IUnitOfStorage
-    
+
     /**
      * 
      * @param Manager|null $connectionManager
@@ -26,13 +25,13 @@ interface IUnitOfStorage {
      * @return void
      */
     public function setContext(?string $context): void;
-    
+
     /**
      * 
      * @return string|null
      */
     public function getContext(): ?string;
-    
+
     /**
      * 
      * @return int
@@ -45,35 +44,35 @@ interface IUnitOfStorage {
      * @return IStorage
      */
     public function getStorage(string $classModel): ?IStorage;
-    
+
     /**
      * 
      * @param IModel $model
      * @return void
      */
     public function attach(IModel $model): void;
-    
+
     /**
      * 
      * @param IModel $model
      * @return void
      */
     public function persist(IModel $model): void;
-    
+
     /**
      * 
      * @param Collection $collection
      * @return void
      */
     public function persists(Collection $collection): void;
-    
+
     /**
      * 
      * @param IModel $model
      * @return void
      */
     public function safeguard(IModel $model): void;
-    
+
     /**
      * 
      * @param Collection $collection
@@ -106,7 +105,7 @@ interface IUnitOfStorage {
      * @return void
      */
     public function commit(): void;
-    
+
     /**
      * 
      * @return void
