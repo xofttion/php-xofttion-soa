@@ -89,7 +89,13 @@ class EntityMapper implements IEntityMapper
      */
     protected function setValueEntity(ReflectiveEntity $reflective, string $propertyName, $value): void
     {
-        $reflective->setSetter($propertyName, $this->getValue($reflective->getEntity(), $propertyName, $value));
+        if (is_defined($value)) {
+            $entity = $reflective->getEntity();
+            
+            $valueEntity = $this->getValue($entity, $propertyName, $value);
+        
+            $reflective->setSetter($propertyName, $valueEntity);
+        }
     }
 
     /**
@@ -101,22 +107,18 @@ class EntityMapper implements IEntityMapper
      */
     protected function getValue(IEntity $entity, string $propertyName, $value)
     {
-        if (is_defined($value)) {
-            if ($entity->getAggregations()->contains($propertyName)) {
-                $aggregation = $entity->getAggregations()->getValue($propertyName);
+        if ($entity->getAggregations()->contains($propertyName)) {
+            $aggregation = $entity->getAggregations()->getValue($propertyName);
 
-                if ($aggregation->isArray()) {
-                    return $this->createCollection($aggregation->getClass(), $value);
-                }
-                else {
-                    return $this->createEntity($aggregation->getClass(), $value);
-                }
+            if ($aggregation->isArray()) {
+                return $this->createCollection($aggregation->getClass(), $value);
             }
-
-            return $value;
+            else {
+                return $this->createEntity($aggregation->getClass(), $value);
+            }
         }
 
-        return null;
+        return $value;
     }
 
     /**
@@ -127,7 +129,7 @@ class EntityMapper implements IEntityMapper
      */
     protected function createEntity(string $classEntity, $value): ?IEntity
     {
-        return $this->ofArray(new $classEntity(), $value); // Retornando entidad generada
+        return $this->ofArray(new $classEntity(), $value);
     }
 
     /**
@@ -138,13 +140,13 @@ class EntityMapper implements IEntityMapper
      */
     protected function createCollection(string $classEntity, $collection): IEntityCollection
     {
-        $collection = $this->getEntityCollection();
+        $entityCollection = $this->getEntityCollection();
 
         foreach ($collection as $value) {
-            $collection->attach($this->createEntity($classEntity, $value));
+            $entityCollection->attach($this->createEntity($classEntity, $value));
         }
 
-        return $collection;
+        return $entityCollection;
     }
 
     /**
