@@ -25,7 +25,6 @@ class AggregationsStorage implements IAggregationsStorage
 
     private function __construct()
     {
-
     }
 
     // Métodos estáticos de la clase AggregationsStorage

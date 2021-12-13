@@ -119,7 +119,7 @@ class UnitOfWork implements IUnitOfWork
         $this->storeEntity->attach($entity, new StatusEntity(StatusEntity::STATE_DIRTY, clone $entity));
     }
 
-    public function attachCollection(array $entities): void
+    public function collection(array $entities): void
     {
         foreach ($entities as $entity) {
             if ($entity instanceof IEntity) {
@@ -149,13 +149,17 @@ class UnitOfWork implements IUnitOfWork
     }
 
     public function safeguard(IEntity $entity): void
-    {
+    {   
         $this->modify($entity);
+        
+        $storage = $this->getAggregationsStorage();
 
-        $cascades = $this->getAggregationsStorage()->cascade($entity);
+        $cascades = $storage->cascade($entity);
 
-        foreach ($cascades as $aggregation) {
-            $this->modifyAggregation($entity, $cascades->getValue($aggregation));
+        foreach ($cascades as $cascadeAggregation) {
+            $aggregation = $cascades->getValue($cascadeAggregation);
+            
+            $this->modifyAggregation($entity, $aggregation);
         }
     }
 
@@ -285,8 +289,11 @@ class UnitOfWork implements IUnitOfWork
             if (is_null($entityAggregation->getPrimaryKey())) {
                 $this->persist($entityAggregation);
             }
+            
+            $primaryKey = $entityAggregation->getPrimaryKey();
+            $column = $aggregation->getColumn();
 
-            $reflective->setSetter($aggregation->getColumn(), $entityAggregation->getPrimaryKey());
+            $reflective->setSetter($column, $primaryKey);
         }
     }
 
@@ -297,14 +304,17 @@ class UnitOfWork implements IUnitOfWork
      */
     protected function insert(IEntity $entity): void
     {
-        $this->getRepository(get_class($entity))->insert($entity);
+        $repository = $this->getRepository(get_class($entity));
+
+        $repository->insert($entity);
+
         $this->attach($entity);
     }
 
     /**
      * 
      * @param IEntity $parent
-     * @param object $aggregation
+     * @param mixed $aggregation
      * @return void
      */
     protected function insertAggregation(IEntity $parent, $aggregation): void
@@ -329,13 +339,17 @@ class UnitOfWork implements IUnitOfWork
      */
     protected function modify(IEntity $entity): void
     {
-        $this->getRepository(get_class($entity))->safeguard($entity);
+        $classEntity = get_class($entity);
+        
+        $repository = $this->getRepository($classEntity);
+        
+        $repository->safeguard($entity);
     }
 
     /**
      * 
      * @param IEntity $parent
-     * @param object $aggregation
+     * @param mixed $aggregation
      * @return void
      */
     protected function modifyAggregation(IEntity $parent, $aggregation): void
@@ -407,7 +421,11 @@ class UnitOfWork implements IUnitOfWork
      */
     protected function delete(IEntity $entity): void
     {
-        $this->getRepository(get_class($entity))->delete($entity);
+        $classEntity = get_class($entity);
+        
+        $repository = $this->getRepository($classEntity);
+        
+        $repository->delete($entity);
     }
 
     /**
