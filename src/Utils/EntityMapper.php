@@ -107,14 +107,17 @@ class EntityMapper implements IEntityMapper
      */
     protected function getValue(IEntity $entity, string $propertyName, $value)
     {
-        if ($entity->getAggregations()->contains($propertyName)) {
-            $aggregation = $entity->getAggregations()->getValue($propertyName);
+        $aggregations = $entity->getAggregations();
+        
+        if ($aggregations->contains($propertyName)) {
+            $aggregation = $aggregations->getValue($propertyName);
+            $classEntity = $aggregation->getClass();
 
             if ($aggregation->isArray()) {
-                return $this->createCollection($aggregation->getClass(), $value);
+                return $this->createCollection($classEntity, $value);
             }
             else {
-                return $this->createEntity($aggregation->getClass(), $value);
+                return $this->createEntity($classEntity, $value);
             }
         }
 

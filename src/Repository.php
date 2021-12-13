@@ -87,57 +87,93 @@ class Repository implements IRepository
 
     public function insert(IEntity $entity): void
     {
-        $hidrations = $entity->getAggregations()->keys()->refresh();
-
-        $model = $this->getQuery()->insert($entity->toArray(), $hidrations);
+        $query = $this->getQuery(); // Constructor de consulta
+        
+        $aggregationsKeys = $entity->getAggregations()->keys();
+        
+        $refresh = $aggregationsKeys->refresh();
+        
+        $data = $entity->toArray();
+        
+        $model = $query->insert($data, $refresh);
 
         $this->mapper($entity, $model);
     }
 
     public function find(int $id): ?IEntity
     {
-        return $this->createEntity($this->getQuery()->find($id));
+        $query = $this->getQuery(); // Constructor de consulta
+        
+        $model = $query->find($id);
+        
+        return $this->createEntity($model);
     }
 
     public function findAll(): IEntityCollection
     {
-        return $this->createCollection($this->getQuery()->rows());
+        $query = $this->getQuery(); // Constructor de consulta
+        
+        $models = $query->rows();
+        
+        return $this->createCollection($models);
     }
 
     public function fetch(int $id, ?array $aggregations = null): ?IEntity
     {
-        return $this->createEntity($this->getQuery()->record($id, $aggregations));
+        $query = $this->getQuery(); // Constructor de consulta
+        
+        $model = $query->record($id, $aggregations);
+        
+        return $this->createEntity($model);
     }
 
     public function fetchAll(?array $aggregations = null): IEntityCollection
     {
-        return $this->createCollection($this->getQuery()->catalog($aggregations));
+        $query = $this->getQuery(); // Constructor de consulta
+        
+        $models = $query->catalog($aggregations);
+        
+        return $this->createCollection($models);
     }
 
     public function resources(): IEntityCollection
     {
-        return $this->createCollection($this->getQuery($this->getEntity())->catalog());
+        $query = $this->getQuery(); // Constructor de consulta
+        
+        $models = $query->catalog();
+        
+        return $this->createCollection($models);
     }
 
     public function update(int $id, array $data): void
     {
-        $this->getQuery()->update($id, $data);
+        $query = $this->getQuery(); // Constructor de consulta
+        
+        $query->update($id, $data);
     }
 
     public function safeguard(IEntity $entity): void
     {
-        $refreshs = $entity->getAggregations()->keys()->refresh();
-        $primaryKey = $entity->getPrimaryKey();
+        $query = $this->getQuery(); // Constructor de consulta
+        
+        $aggregationsKeys = $entity->getAggregations()->keys();
+        
+        $refresh = $aggregationsKeys->refresh();
+        
         $data = $entity->toArray();
+        
+        $primaryKey = $entity->getPrimaryKey();
 
-        $model = $this->getQuery()->safeguard($primaryKey, $data, $refreshs);
+        $model = $query->safeguard($primaryKey, $data, $refresh);
 
         $this->mapper($entity, $model);
     }
 
     public function delete(IEntity $entity): void
     {
-        $this->getQuery()->delete($entity->getPrimaryKey());
+        $query = $this->getQuery(); // Constructor de consulta
+        
+        $query->delete($entity->getPrimaryKey());
     }
 
     // Métodos de la clase Repository
@@ -169,7 +205,9 @@ class Repository implements IRepository
     protected function mapper(IEntity $entity, ?IModel $model): void
     {
         if (!is_null($model)) {
-            $this->getMapper()->clean()->ofArray($entity, $model->toArray());
+            $mapper = $this->getMapper()->clean();
+            
+            $mapper->ofArray($entity, $model->toArray());
         }
     }
 
@@ -190,7 +228,9 @@ class Repository implements IRepository
         $this->mapper($entity, $model);
 
         if (!is_null($this->getUnitOfWork())) {
-            $this->getUnitOfWork()->attachCollection($this->getMapper()->getCollection());
+            $collection = $this->getMapper()->getCollection();
+            
+            $this->getUnitOfWork()->collection($collection);
         }
 
         return $entity;
@@ -207,7 +247,9 @@ class Repository implements IRepository
         $entities = $this->getCollection();
 
         foreach ($collection as $model) {
-            $entities->attach($this->createEntity($model, $classEntity));
+            $entity = $this->createEntity($model, $classEntity);
+            
+            $entities->attach($entity);
         }
 
         return $entities;

@@ -70,7 +70,7 @@ interface IUnitOfWork
      * @param array $collection
      * @return void
      */
-    public function attachCollection(array $collection): void;
+    public function collection(array $collection): void;
 
     /**
      * 
